@@ -37,13 +37,13 @@ export function CartProvider({ children }: CartProviderProps): JSX.Element {
     localStorage.setItem('@RocketShoes:cart', JSON.stringify(newCart))
   }
 
-  function saveProductInLocalStorage(newProduct: Product) {
+  function saveProductInLocalStorage(newProduct: Product, autoUpdateAmount = true) {
     const productInCart = cart.some(product => product.id === newProduct.id)
 
     if (productInCart) {
       saveCart(cart.map(product => {
         return product.id === newProduct.id
-          ? { ...product, amount: product.amount + newProduct.amount }
+          ? { ...product, amount: autoUpdateAmount ? product.amount + newProduct.amount : newProduct.amount }
           : product
       }))
 
@@ -67,7 +67,7 @@ export function CartProvider({ children }: CartProviderProps): JSX.Element {
 
   const removeProduct = (productId: number) => {
     try {
-      // TODO
+      saveCart(cart.filter(product => product.id !== productId))
     } catch {
       // TODO
     }
@@ -78,9 +78,17 @@ export function CartProvider({ children }: CartProviderProps): JSX.Element {
     amount,
   }: UpdateProductAmount) => {
     try {
-      // TODO
+      const { data: product } = await api.get<Product>(`products/${productId}`)
+      const { data: stockProduct } = await api.get<UpdateProductAmount>(`stock/${productId}`)
+      const autoUpdateAmount = false
+
+      if (amount > stockProduct.amount)
+        return toast.error('Quantidade solicitada fora de estoque')
+
+      saveProductInLocalStorage({ ...product, amount }, autoUpdateAmount)
     } catch {
       // TODO
+      toast.error('Erro na alteração de quantidade do produto')
     }
   };
 
