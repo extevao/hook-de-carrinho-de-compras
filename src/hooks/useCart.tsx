@@ -94,7 +94,7 @@ export function CartProvider({ children }: CartProviderProps): JSX.Element {
     amount,
   }: UpdateProductAmount) => {
     try {
-      if (amount < 1) {
+      if (amount <= 0) {
         return
       }
 
