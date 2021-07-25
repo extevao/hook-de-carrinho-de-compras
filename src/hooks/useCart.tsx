@@ -37,13 +37,13 @@ export function CartProvider({ children }: CartProviderProps): JSX.Element {
     localStorage.setItem('@RocketShoes:cart', JSON.stringify(newCart))
   }
 
-  function saveProductInLocalStorage(newProduct: Product, autoUpdateAmount = true) {
+  function saveProductInLocalStorage(newProduct: Product) {
     const productInCart = cart.some(product => product.id === newProduct.id)
 
     if (productInCart) {
       saveCart(cart.map(product => {
         return product.id === newProduct.id
-          ? { ...product, amount: autoUpdateAmount ? product.amount + newProduct.amount : newProduct.amount }
+          ? { ...newProduct }
           : product
       }))
 
@@ -56,8 +56,17 @@ export function CartProvider({ children }: CartProviderProps): JSX.Element {
   const addProduct = async (productId: number) => {
     try {
       const { data: product } = await api.get<Product>(`products/${productId}`)
+      const { data: stockProduct } = await api.get<Stock>(`stock/${productId}`)
 
-      saveProductInLocalStorage({ ...product, amount: 1 })
+      const productInCart = cart.find((product) => product.id === productId)
+      const amountProduct = productInCart ? productInCart.amount + 1 : 1
+
+      if (amountProduct > stockProduct.amount) {
+        toast.error('Quantidade solicitada fora de estoque')
+        return
+      }
+
+      saveProductInLocalStorage({ ...product, amount: amountProduct })
     } catch {
       // TODO
       toast.error('Erro na adição do produto')
@@ -67,9 +76,16 @@ export function CartProvider({ children }: CartProviderProps): JSX.Element {
 
   const removeProduct = (productId: number) => {
     try {
+      const existProductInCart = cart.some(product => product.id === productId)
+
+      if (!existProductInCart) {
+        throw new Error('Product Not In Cart')
+      }
+
       saveCart(cart.filter(product => product.id !== productId))
     } catch {
       // TODO
+      toast.error('Erro na remoção do produto')
     }
   };
 
@@ -78,14 +94,19 @@ export function CartProvider({ children }: CartProviderProps): JSX.Element {
     amount,
   }: UpdateProductAmount) => {
     try {
+      if (amount < 1) {
+        return
+      }
+
       const { data: product } = await api.get<Product>(`products/${productId}`)
-      const { data: stockProduct } = await api.get<UpdateProductAmount>(`stock/${productId}`)
-      const autoUpdateAmount = false
+      const { data: stockProduct } = await api.get<Stock>(`stock/${productId}`)
 
-      if (amount > stockProduct.amount)
-        return toast.error('Quantidade solicitada fora de estoque')
+      if (amount > stockProduct.amount) {
+        toast.error('Quantidade solicitada fora de estoque')
+        return
+      }
 
-      saveProductInLocalStorage({ ...product, amount }, autoUpdateAmount)
+      saveProductInLocalStorage({ ...product, amount })
     } catch {
       // TODO
       toast.error('Erro na alteração de quantidade do produto')
