@@ -104,11 +104,9 @@ export function CartProvider({ children }: CartProviderProps): JSX.Element {
         return
       }
 
-      const { data: product } = await api.get<Product>(`products/${productId}`)
+      const product = cart.find(product => product.id === productId)
 
-      const existProductInCart = cart.some(product => product.id === productId)
-
-      if (!existProductInCart) {
+      if (!product) {
         throw new Error('Product Not In Cart')
       }
 
