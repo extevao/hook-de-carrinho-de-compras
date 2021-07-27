@@ -68,7 +68,6 @@ export function CartProvider({ children }: CartProviderProps): JSX.Element {
 
       saveProductInLocalStorage({ ...product, amount: amountProduct })
     } catch {
-      // TODO
       toast.error('Erro na adição do produto')
 
     }
@@ -98,12 +97,19 @@ export function CartProvider({ children }: CartProviderProps): JSX.Element {
         return
       }
 
-      const { data: product } = await api.get<Product>(`products/${productId}`)
       const { data: stockProduct } = await api.get<Stock>(`stock/${productId}`)
 
       if (amount > stockProduct.amount) {
         toast.error('Quantidade solicitada fora de estoque')
         return
+      }
+
+      const { data: product } = await api.get<Product>(`products/${productId}`)
+
+      const existProductInCart = cart.some(product => product.id === productId)
+
+      if (!existProductInCart) {
+        throw new Error('Product Not In Cart')
       }
 
       saveProductInLocalStorage({ ...product, amount })
